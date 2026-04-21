@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { buildCashFlowSeries } from "../../data/accountingSelectors";
-import { useJournalEntriesStore } from "../../data/journalEntriesStore";
+import type { JournalEntry } from "../journal-entries/journalEntriesData";
 import { type CashFlowPoint, type DashboardTab } from "./dashboardData";
 
 type Point = {
@@ -21,6 +21,7 @@ type TooltipPosition = {
 };
 
 type CashFlowChartProps = {
+  journalEntries: JournalEntry[];
   period: DashboardTab;
 };
 
@@ -271,9 +272,8 @@ function interpolateFrame(from: ChartFrame, to: ChartFrame, progress: number): C
   };
 }
 
-export function CashFlowChart({ period }: CashFlowChartProps) {
-  const journalEntries = useJournalEntriesStore();
-  const periodData = useMemo(() => buildCashFlowSeries(journalEntries, period), [journalEntries, period]);
+export function CashFlowChart({ journalEntries, period }: CashFlowChartProps) {
+  const periodData = useMemo(() => buildCashFlowSeries(journalEntries, period, { allowFallback: false }), [journalEntries, period]);
   const targetFrame = useMemo(() => buildChartFrame(periodData), [periodData]);
   const [frame, setFrame] = useState<ChartFrame>(() => targetFrame);
   const frameRef = useRef<ChartFrame>(frame);
@@ -378,11 +378,12 @@ export function CashFlowChart({ period }: CashFlowChartProps) {
         <h2 id="cash-flow-overview">Cash Flow Overview</h2>
       </div>
 
-      <div className="dashboard-chart__stage">
-        <svg
-          ref={svgRef}
-          aria-label={`Cash flow overview chart for ${period.toLowerCase()}`}
-          className="dashboard-chart"
+      {journalEntries.length ? (
+        <div className="dashboard-chart__stage">
+          <svg
+            ref={svgRef}
+            aria-label={`Cash flow overview chart for ${period.toLowerCase()}`}
+            className="dashboard-chart"
           role="img"
           viewBox={`0 0 ${chartWidth} ${chartHeight}`}
         >
@@ -458,29 +459,35 @@ export function CashFlowChart({ period }: CashFlowChartProps) {
             x={0}
             y={0}
           />
-        </svg>
+          </svg>
 
-        {hoveredPoint && tooltipPosition ? (
-          <div className="dashboard-chart__tooltip" style={{ left: tooltipPosition.left, top: tooltipPosition.top }}>
-            <div className="dashboard-chart__tooltipTitle">{hoveredPoint.label}</div>
-            <div className="dashboard-chart__tooltipRow dashboard-chart__tooltipRow--income">
-              <span className="dashboard-chart__tooltipLabel">Income</span>
-              <span>:</span>
-              <span className="dashboard-chart__tooltipValue">{formatCurrency(hoveredPoint.income)}</span>
+          {hoveredPoint && tooltipPosition ? (
+            <div className="dashboard-chart__tooltip" style={{ left: tooltipPosition.left, top: tooltipPosition.top }}>
+              <div className="dashboard-chart__tooltipTitle">{hoveredPoint.label}</div>
+              <div className="dashboard-chart__tooltipRow dashboard-chart__tooltipRow--income">
+                <span className="dashboard-chart__tooltipLabel">Income</span>
+                <span>:</span>
+                <span className="dashboard-chart__tooltipValue">{formatCurrency(hoveredPoint.income)}</span>
+              </div>
+              <div className="dashboard-chart__tooltipRow dashboard-chart__tooltipRow--expenses">
+                <span className="dashboard-chart__tooltipLabel">Expenses</span>
+                <span>:</span>
+                <span className="dashboard-chart__tooltipValue">{formatCurrency(hoveredPoint.expenses)}</span>
+              </div>
+              <div className="dashboard-chart__tooltipRow dashboard-chart__tooltipRow--net">
+                <span className="dashboard-chart__tooltipLabel">Net Cash Flow</span>
+                <span>:</span>
+                <span className="dashboard-chart__tooltipValue">{formatCurrency(getNet(hoveredPoint))}</span>
+              </div>
             </div>
-            <div className="dashboard-chart__tooltipRow dashboard-chart__tooltipRow--expenses">
-              <span className="dashboard-chart__tooltipLabel">Expenses</span>
-              <span>:</span>
-              <span className="dashboard-chart__tooltipValue">{formatCurrency(hoveredPoint.expenses)}</span>
-            </div>
-            <div className="dashboard-chart__tooltipRow dashboard-chart__tooltipRow--net">
-              <span className="dashboard-chart__tooltipLabel">Net Cash Flow</span>
-              <span>:</span>
-              <span className="dashboard-chart__tooltipValue">{formatCurrency(getNet(hoveredPoint))}</span>
-            </div>
-          </div>
-        ) : null}
-      </div>
+          ) : null}
+        </div>
+      ) : (
+        <div className="dashboard-emptyState dashboard-emptyState--chart">
+          <p className="dashboard-emptyState__title">No matching cash flow data</p>
+          <p className="dashboard-emptyState__text">Try widening the filters to see the chart.</p>
+        </div>
+      )}
 
       <div className="dashboard-legend" aria-label="Chart legend">
         {seriesMeta.map((entry) => (

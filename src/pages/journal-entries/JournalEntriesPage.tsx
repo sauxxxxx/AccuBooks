@@ -56,12 +56,14 @@ export function JournalEntriesPage() {
         credit: Math.max(debitTotal, creditTotal),
         date: draft.date,
         debit: Math.max(debitTotal, creditTotal),
+        client: draft.client.trim() || undefined,
         description: draft.description.trim() || "New journal entry",
         entryNumber: formatEntryNumber(getNextEntryIndex(current)),
         journal: deriveJournalGroup(draft.transactionType),
         lineItems: draft.lineItems,
         reference: draft.reference.trim() || undefined,
         status: "draft",
+        transactionType: draft.transactionType,
       };
 
       return [nextEntry, ...current];

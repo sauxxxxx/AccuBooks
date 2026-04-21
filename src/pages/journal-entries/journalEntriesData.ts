@@ -13,9 +13,11 @@ export type JournalEntry = {
   entryNumber: string;
   createdAt?: string;
   createdBy?: string;
+  client?: string;
   lineItems?: JournalLineItem[];
   journal: JournalJournal;
   reference?: string;
+  transactionType?: JournalType;
   status: JournalStatus;
 };
 
@@ -84,6 +86,7 @@ export const journalEntries: JournalEntry[] = [
     date: "Apr 5, 2026",
     debit: 54000,
     description: "Service revenue - All clients April",
+    client: "Multiple clients",
     entryNumber: "JE-2026-017",
     lineItems: [
       { account: "1012 - Bank - BPI", credit: 0, debit: 54000, id: "je-017-1" },
@@ -123,6 +126,7 @@ export const journalEntries: JournalEntry[] = [
     date: "Mar 5, 2026",
     debit: 54000,
     description: "Service revenue - All clients March",
+    client: "Multiple clients",
     entryNumber: "JE-2026-014",
     lineItems: [
       { account: "1012 - Bank - BPI", credit: 0, debit: 54000, id: "je-014-1" },
@@ -155,6 +159,7 @@ export const journalEntries: JournalEntry[] = [
     date: "Feb 14, 2026",
     debit: 25000,
     description: "Service revenue from Santos IT - February",
+    client: "Santos IT Solutions",
     entryNumber: "JE-2026-012",
     lineItems: [
       { account: "1012 - Bank - BPI", credit: 0, debit: 25000, id: "je-012-1" },
@@ -194,6 +199,7 @@ export const journalEntries: JournalEntry[] = [
     date: "Jan 22, 2026",
     debit: 62000,
     description: "Retail sales batch - January",
+    client: "Multiple clients",
     entryNumber: "JE-2026-009",
     lineItems: [
       { account: "1012 - Bank - BPI", credit: 0, debit: 62000, id: "je-009-1" },

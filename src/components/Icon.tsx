@@ -19,6 +19,7 @@ import {
   Mail,
   PieChart,
   Menu,
+  Sliders,
   Eye,
   Package,
   Plus,
@@ -65,6 +66,7 @@ export type IconName =
   | "mail"
   | "collapse-left"
   | "collapse-right"
+  | "sliders"
   | "pie-chart"
   | "trending-down"
   | "trending-up"
@@ -114,6 +116,7 @@ const featherIcons: Record<FeatherIconName, ComponentType<any>> = {
   mail: Mail,
   "collapse-left": ChevronLeft,
   "collapse-right": ChevronRight,
+  sliders: Sliders,
   "pie-chart": PieChart,
   "trending-down": TrendingDown,
   "trending-up": TrendingUp,

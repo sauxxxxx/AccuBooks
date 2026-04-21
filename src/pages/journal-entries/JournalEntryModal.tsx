@@ -1,6 +1,7 @@
 import { createPortal } from "react-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "../../components/Icon";
+import { useClientsStore } from "../../data/clientsStore";
 import type { JournalEntryDraft, JournalLineItem, JournalType } from "./journalEntriesData";
 import { accountOptions, transactionTypeOptions } from "./journalEntriesData";
 
@@ -22,6 +23,12 @@ type AccountMenuState = {
   id: string;
   left: number;
   placement: "down" | "up";
+  top: number;
+  width: number;
+};
+
+type ClientMenuState = {
+  left: number;
   top: number;
   width: number;
 };
@@ -136,10 +143,21 @@ export function JournalEntryModal({ onClose, onSave }: JournalEntryModalProps) {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [datePickerMonth, setDatePickerMonth] = useState(() => startOfMonth(parseDateValue(DEFAULT_ENTRY_DATE) ?? new Date()));
   const [transactionTypeOpen, setTransactionTypeOpen] = useState(false);
+  const [clientMenu, setClientMenu] = useState<ClientMenuState | null>(null);
   const [accountMenu, setAccountMenu] = useState<AccountMenuState | null>(null);
   const modalRef = useRef<HTMLDivElement | null>(null);
   const datePickerRef = useRef<HTMLLabelElement | null>(null);
-  const selectRef = useRef<HTMLDivElement | null>(null);
+  const transactionTypeRef = useRef<HTMLDivElement | null>(null);
+  const clientSelectRef = useRef<HTMLDivElement | null>(null);
+  const clients = useClientsStore();
+
+  const clientOptions = useMemo(
+    () =>
+      [...new Set(clients.map((client) => client.name.trim()).filter(Boolean))].sort((left, right) =>
+        left.localeCompare(right, "en"),
+      ),
+    [clients],
+  );
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -158,8 +176,17 @@ export function JournalEntryModal({ onClose, onSave }: JournalEntryModalProps) {
         setDatePickerOpen(false);
       }
 
-      if (selectRef.current && target instanceof Node && !selectRef.current.contains(target)) {
+      if (transactionTypeRef.current && target instanceof Node && !transactionTypeRef.current.contains(target)) {
         setTransactionTypeOpen(false);
+      }
+
+      if (
+        clientSelectRef.current &&
+        target instanceof Node &&
+        !clientSelectRef.current.contains(target) &&
+        !targetElement?.closest("[data-journal-client-picker-menu]")
+      ) {
+        setClientMenu(null);
       }
 
       if (
@@ -184,6 +211,11 @@ export function JournalEntryModal({ onClose, onSave }: JournalEntryModalProps) {
           return;
         }
 
+        if (clientMenu) {
+          setClientMenu(null);
+          return;
+        }
+
         if (accountMenu) {
           setAccountMenu(null);
           return;
@@ -200,7 +232,7 @@ export function JournalEntryModal({ onClose, onSave }: JournalEntryModalProps) {
       document.removeEventListener("pointerdown", handlePointerDown);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [accountMenu, datePickerOpen, onClose, transactionTypeOpen]);
+  }, [accountMenu, clientMenu, datePickerOpen, onClose, transactionTypeOpen]);
 
   useEffect(() => {
     if (!datePickerOpen) {
@@ -268,48 +300,121 @@ export function JournalEntryModal({ onClose, onSave }: JournalEntryModalProps) {
     });
   };
 
-  const accountMenuNode = accountMenu && activeAccountLineItem && typeof document !== "undefined"
-    ? createPortal(
-        <div
-          className="journal-modal__selectMenu journal-modal__selectMenu--portal"
-          data-journal-account-picker-menu
-          role="listbox"
-          aria-label="Account"
-          style={{
-            left: `${accountMenu.left}px`,
-            maxHeight: "300px",
-            overflowY: "auto",
-            position: "fixed",
-            right: "auto",
-            top: `${accountMenu.top}px`,
-            width: `${accountMenu.width}px`,
-            zIndex: 90,
-          }}
-        >
-          {accountOptions.map((option) => {
-            const isSelected = option === activeAccountLineItem.account;
+  const handleOpenClientMenu = (button: HTMLButtonElement) => {
+    const rect = button.getBoundingClientRect();
+    const menuHeight = Math.min((clientOptions.length + 1) * 38 + 12, 300);
+    const spaceBelow = window.innerHeight - rect.bottom - 12;
+    const spaceAbove = rect.top - 12;
+    const shouldOpenUp = spaceBelow < menuHeight && spaceAbove > spaceBelow;
 
-            return (
-              <button
-                key={option}
-                type="button"
-                className={`journal-modal__selectOption ${isSelected ? "journal-modal__selectOption--active" : ""}`}
-                onClick={() => {
-                  updateLineItem(activeAccountLineItem.id, { account: option });
-                  setAccountMenu(null);
-                }}
-                role="option"
-                aria-selected={isSelected}
-              >
-                <span>{option}</span>
-                {isSelected ? <Icon name="check" size={16} /> : null}
-              </button>
-            );
-          })}
-        </div>,
-        document.body,
-      )
-    : null;
+    setClientMenu({
+      left: rect.left,
+      top: shouldOpenUp ? Math.max(12, rect.top - menuHeight - 6) : rect.bottom + 6,
+      width: rect.width,
+    });
+  };
+
+  const clientMenuNode =
+    clientMenu && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            className="journal-modal__selectMenu journal-modal__selectMenu--portal"
+            data-journal-client-picker-menu
+            role="listbox"
+            aria-label="Client"
+            style={{
+              left: `${clientMenu.left}px`,
+              maxHeight: "300px",
+              overflowY: "auto",
+              position: "fixed",
+              right: "auto",
+              top: `${clientMenu.top}px`,
+              width: `${clientMenu.width}px`,
+              zIndex: 90,
+            }}
+          >
+            <button
+              type="button"
+              className={`journal-modal__selectOption ${!form.client ? "journal-modal__selectOption--active" : ""}`}
+              onClick={() => {
+                setForm((current) => ({ ...current, client: "" }));
+                setClientMenu(null);
+              }}
+              role="option"
+              aria-selected={!form.client}
+            >
+              <span>Select client</span>
+              {!form.client ? <Icon name="check" size={16} /> : null}
+            </button>
+
+            {clientOptions.map((option) => {
+              const isSelected = option === form.client;
+
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  className={`journal-modal__selectOption ${isSelected ? "journal-modal__selectOption--active" : ""}`}
+                  onClick={() => {
+                    setForm((current) => ({ ...current, client: option }));
+                    setClientMenu(null);
+                  }}
+                  role="option"
+                  aria-selected={isSelected}
+                >
+                  <span>{option}</span>
+                  {isSelected ? <Icon name="check" size={16} /> : null}
+                </button>
+              );
+            })}
+          </div>,
+          document.body,
+        )
+      : null;
+
+  const accountMenuNode =
+    accountMenu && activeAccountLineItem && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            className="journal-modal__selectMenu journal-modal__selectMenu--portal"
+            data-journal-account-picker-menu
+            role="listbox"
+            aria-label="Account"
+            style={{
+              left: `${accountMenu.left}px`,
+              maxHeight: "300px",
+              overflowY: "auto",
+              position: "fixed",
+              right: "auto",
+              top: `${accountMenu.top}px`,
+              width: `${accountMenu.width}px`,
+              zIndex: 90,
+            }}
+          >
+            {accountOptions.map((option) => {
+              const isSelected = option === activeAccountLineItem.account;
+
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  className={`journal-modal__selectOption ${isSelected ? "journal-modal__selectOption--active" : ""}`}
+                  onClick={() => {
+                    updateLineItem(activeAccountLineItem.id, { account: option });
+                    setAccountMenu(null);
+                  }}
+                  role="option"
+                  aria-selected={isSelected}
+                >
+                  <span>{option}</span>
+                  {isSelected ? <Icon name="check" size={16} /> : null}
+                </button>
+              );
+            })}
+          </div>,
+          document.body,
+        )
+      : null;
 
   return (
     <div className="journal-modal__overlay" onClick={onClose}>
@@ -349,10 +454,12 @@ export function JournalEntryModal({ onClose, onSave }: JournalEntryModalProps) {
                   value={form.date}
                   onClick={() => {
                     setTransactionTypeOpen(false);
+                    setClientMenu(null);
                     setDatePickerOpen(true);
                   }}
                   onFocus={() => {
                     setTransactionTypeOpen(false);
+                    setClientMenu(null);
                     setDatePickerOpen(true);
                   }}
                 />
@@ -363,6 +470,7 @@ export function JournalEntryModal({ onClose, onSave }: JournalEntryModalProps) {
                   aria-expanded={datePickerOpen}
                   onClick={() => {
                     setTransactionTypeOpen(false);
+                    setClientMenu(null);
                     setDatePickerOpen((current) => !current);
                   }}
                 >
@@ -433,12 +541,15 @@ export function JournalEntryModal({ onClose, onSave }: JournalEntryModalProps) {
               ) : null}
             </label>
 
-            <div className="journal-modal__field" ref={selectRef}>
+            <div className="journal-modal__field" ref={transactionTypeRef}>
               <span>Transaction Type</span>
               <button
                 type="button"
                 className={`journal-modal__selectButton ${transactionTypeOpen ? "journal-modal__selectButton--open" : ""}`}
-                onClick={() => setTransactionTypeOpen((current) => !current)}
+                onClick={() => {
+                  setClientMenu(null);
+                  setTransactionTypeOpen((current) => !current);
+                }}
               >
                 <span>{form.transactionType}</span>
                 <Icon name="chevron-down" size={16} />
@@ -492,16 +603,30 @@ export function JournalEntryModal({ onClose, onSave }: JournalEntryModalProps) {
               </div>
             </label>
 
-            <label className="journal-modal__field">
+            <div className="journal-modal__field" ref={clientSelectRef} data-journal-client-picker>
               <span>Client</span>
-              <div className="journal-modal__inputWrap">
-                <input
-                  type="text"
-                  value={form.client}
-                  onChange={(event) => setForm((current) => ({ ...current, client: event.target.value }))}
-                />
-              </div>
-            </label>
+              <button
+                type="button"
+                className={`journal-modal__selectButton ${clientMenu ? "journal-modal__selectButton--open" : ""}`}
+                aria-expanded={Boolean(clientMenu)}
+                onClick={(event) => {
+                  if (clientMenu) {
+                    setClientMenu(null);
+                    return;
+                  }
+
+                  setDatePickerOpen(false);
+                  setTransactionTypeOpen(false);
+                  setAccountMenu(null);
+                  handleOpenClientMenu(event.currentTarget);
+                }}
+              >
+                <span className={form.client ? "" : "journal-modal__selectPlaceholder"}>
+                  {form.client || "Select client"}
+                </span>
+                <Icon name="chevron-down" size={16} />
+              </button>
+            </div>
           </div>
 
           <div className="journal-modal__sectionHeader">
@@ -546,6 +671,7 @@ export function JournalEntryModal({ onClose, onSave }: JournalEntryModalProps) {
 
                         setDatePickerOpen(false);
                         setTransactionTypeOpen(false);
+                        setClientMenu(null);
                         handleOpenAccountMenu(lineItem.id, event.currentTarget);
                       }}
                     >
@@ -577,15 +703,16 @@ export function JournalEntryModal({ onClose, onSave }: JournalEntryModalProps) {
                   </label>
                 </div>
               ))}
+            </div>
           </div>
 
+          {clientMenuNode}
           {accountMenuNode}
 
           <div className="journal-modal__totals">
             <div className="journal-modal__totalsLabel">Totals:</div>
-              <div className="journal-modal__totalsValue">{formatMoney(debitTotal)}</div>
-              <div className="journal-modal__totalsValue">{formatMoney(creditTotal)}</div>
-            </div>
+            <div className="journal-modal__totalsValue">{formatMoney(debitTotal)}</div>
+            <div className="journal-modal__totalsValue">{formatMoney(creditTotal)}</div>
           </div>
 
           <div className="journal-modal__footer">

@@ -340,11 +340,15 @@ function getExpenseSliceTotals(entries: JournalEntry[]) {
   }));
 }
 
-function getExpenseSlices(entries: JournalEntry[]): ExpenseSlice[] {
+function getExpenseSlices(entries: JournalEntry[], allowFallback = true): ExpenseSlice[] {
   const totals = getExpenseSliceTotals(entries);
   const totalAmount = totals.reduce((sum, slice) => sum + slice.amount, 0);
 
   if (totalAmount <= 0) {
+    if (!allowFallback) {
+      return [];
+    }
+
     return fallbackExpenseSlices.map((slice) => ({ ...slice }));
   }
 
@@ -397,8 +401,12 @@ function getWeekOfYear(date: Date) {
   return Math.ceil(((target.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
 }
 
-function buildCashFlowBuckets(entries: JournalEntry[], period: DashboardTab): CashFlowPoint[] {
+function buildCashFlowBuckets(entries: JournalEntry[], period: DashboardTab, allowFallback = true): CashFlowPoint[] {
   if (!entries.length) {
+    if (!allowFallback) {
+      return [];
+    }
+
     return fallbackCashFlowByPeriod[period].map((point) => ({ ...point }));
   }
 
@@ -551,7 +559,7 @@ function getDashboardSummaryMetrics(entries: JournalEntry[], invoices: InvoiceRe
   return derived;
 }
 
-function getDashboardRecentTransactions(entries: JournalEntry[]): Transaction[] {
+function getDashboardRecentTransactions(entries: JournalEntry[], allowFallback = true): Transaction[] {
   const sorted = [...entries].sort((left, right) => {
     const leftDate = parseLooseDate(left.date)?.getTime() ?? 0;
     const rightDate = parseLooseDate(right.date)?.getTime() ?? 0;
@@ -559,6 +567,10 @@ function getDashboardRecentTransactions(entries: JournalEntry[]): Transaction[] 
   });
 
   if (!sorted.length) {
+    if (!allowFallback) {
+      return [];
+    }
+
     return fallbackRecentTransactions.map((transaction) => ({ ...transaction }));
   }
 
@@ -703,16 +715,16 @@ export function buildDashboardSummaryMetrics(entries: JournalEntry[], invoices: 
   return getDashboardSummaryMetrics(entries, invoices);
 }
 
-export function buildDashboardRecentTransactions(entries: JournalEntry[]) {
-  return getDashboardRecentTransactions(entries);
+export function buildDashboardRecentTransactions(entries: JournalEntry[], options?: { allowFallback?: boolean }) {
+  return getDashboardRecentTransactions(entries, options?.allowFallback !== false);
 }
 
-export function buildCashFlowSeries(entries: JournalEntry[], period: DashboardTab) {
-  return buildCashFlowBuckets(entries, period);
+export function buildCashFlowSeries(entries: JournalEntry[], period: DashboardTab, options?: { allowFallback?: boolean }) {
+  return buildCashFlowBuckets(entries, period, options?.allowFallback !== false);
 }
 
-export function buildExpenseSlices(entries: JournalEntry[]) {
-  return getExpenseSlices(entries);
+export function buildExpenseSlices(entries: JournalEntry[], options?: { allowFallback?: boolean }) {
+  return getExpenseSlices(entries, options?.allowFallback !== false);
 }
 
 export function buildFinancialStatementData(entries: JournalEntry[]) {

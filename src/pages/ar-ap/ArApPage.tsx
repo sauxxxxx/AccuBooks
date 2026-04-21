@@ -145,6 +145,7 @@ function buildPaymentJournalEntry(
     credit: amount,
     date: draft.date,
     debit: amount,
+    client: isAr ? draft.entity : undefined,
     description: `${paymentNumber} - ${draft.entity}`,
     entryNumber: journalEntryNumber,
     journal: isAr ? "Cash Receipts" : "Cash Disbursements",
@@ -154,13 +155,14 @@ function buildPaymentJournalEntry(
           { account: "1012 - Bank - BPI", credit: 0, debit: amount, id: `${paymentNumber}-je-1` },
           { account: "1110 - Trade Receivables", credit: amount, debit: 0, id: `${paymentNumber}-je-2` },
         ]
-      : [
-          { account: "2110 - Trade Payables", credit: 0, debit: amount, id: `${paymentNumber}-je-1` },
-          { account: "1012 - Bank - BPI", credit: amount, debit: 0, id: `${paymentNumber}-je-2` },
-        ],
-    status: "posted",
-  };
-}
+        : [
+            { account: "2110 - Trade Payables", credit: 0, debit: amount, id: `${paymentNumber}-je-1` },
+            { account: "1012 - Bank - BPI", credit: amount, debit: 0, id: `${paymentNumber}-je-2` },
+          ],
+      status: "posted",
+      transactionType: isAr ? "Income" : "Expense",
+    };
+  }
 
 function ArApSummaryCard({
   icon,

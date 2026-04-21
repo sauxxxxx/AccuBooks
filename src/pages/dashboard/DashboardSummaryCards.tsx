@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { Icon } from "../../components/Icon";
 import { buildDashboardSummaryMetrics } from "../../data/accountingSelectors";
-import { useInvoicesStore } from "../../data/invoicesStore";
-import { useJournalEntriesStore } from "../../data/journalEntriesStore";
+import type { InvoiceRecord } from "../invoicing/invoicingData";
+import type { JournalEntry } from "../journal-entries/journalEntriesData";
 
 const toneClassMap: Record<string, string> = {
   cashflow: "dashboard-stat--cashflow",
@@ -11,9 +11,12 @@ const toneClassMap: Record<string, string> = {
   warning: "dashboard-stat--warning",
 };
 
-export function DashboardSummaryCards() {
-  const journalEntries = useJournalEntriesStore();
-  const invoices = useInvoicesStore();
+type DashboardSummaryCardsProps = {
+  invoices: InvoiceRecord[];
+  journalEntries: JournalEntry[];
+};
+
+export function DashboardSummaryCards({ invoices, journalEntries }: DashboardSummaryCardsProps) {
   const summaryMetrics = useMemo(() => buildDashboardSummaryMetrics(journalEntries, invoices), [invoices, journalEntries]);
 
   return (

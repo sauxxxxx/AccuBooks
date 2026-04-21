@@ -78,6 +78,7 @@ function buildInvoiceJournalEntry(
     credit: total,
     date: postingDate,
     debit: total,
+    client: draft.client,
     description: `${invoiceNumber} - ${draft.client}`,
     entryNumber: journalEntryNumber,
     journal: isReceipt ? "Cash Receipts" : "Sales",
@@ -88,12 +89,13 @@ function buildInvoiceJournalEntry(
           { account: "4200 - Service Revenue", credit: subtotal, debit: 0, id: `${invoiceNumber}-je-2` },
           { account: "2210 - VAT Payable", credit: vatAmount, debit: 0, id: `${invoiceNumber}-je-3` },
         ]
-      : [
-          { account: "1110 - Trade Receivables", credit: 0, debit: total, id: `${invoiceNumber}-je-1` },
-          { account: "4200 - Service Revenue", credit: subtotal, debit: 0, id: `${invoiceNumber}-je-2` },
-          { account: "2210 - VAT Payable", credit: vatAmount, debit: 0, id: `${invoiceNumber}-je-3` },
-        ],
+        : [
+            { account: "1110 - Trade Receivables", credit: 0, debit: total, id: `${invoiceNumber}-je-1` },
+            { account: "4200 - Service Revenue", credit: subtotal, debit: 0, id: `${invoiceNumber}-je-2` },
+            { account: "2210 - VAT Payable", credit: vatAmount, debit: 0, id: `${invoiceNumber}-je-3` },
+          ],
     status: "posted",
+    transactionType: "Income",
   };
 }
 
